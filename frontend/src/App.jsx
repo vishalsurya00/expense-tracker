@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import {
   Document,
   Packer,
@@ -766,7 +766,7 @@ function App() {
       ];
     });
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: 40,
       head: headers,
       body: data,
@@ -790,7 +790,7 @@ function App() {
       }
     });
 
-    const finalY = doc.previousAutoTable.finalY + 15;
+    const finalY = doc.lastAutoTable.finalY + 15;
     const exportCredited = filteredEntries.reduce((sum, e) => sum + (e.credited || 0), 0);
     const exportDebited = filteredEntries.reduce((sum, e) => sum + (e.debited || 0), 0);
     const exportNet = exportCredited - exportDebited;
@@ -1062,7 +1062,7 @@ function App() {
           </section>
 
           {/* Search & Filter Section */}
-          <section className="form-panel" style={{ padding: '1.5rem' }}>
+          <section className="form-panel" style={{ padding: '1.5rem', position: 'relative', zIndex: 10 }}>
             <h2 className="panel-title" style={{ fontSize: '1.15rem', marginBottom: '1rem' }}>Search & Filter Transactions</h2>
             <div className="filter-bar">
               <div className="form-group" style={{ flex: 2, minWidth: '220px' }}>
