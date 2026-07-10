@@ -273,6 +273,19 @@ function App() {
   const [endDate, setEndDate] = useState('');
   const [filterCategory, setFilterCategory] = useState('All');
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportRef = useRef(null);
+
+  // Close export dropdown on click outside
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const handleClickOutside = (e) => {
+      if (exportRef.current && !exportRef.current.contains(e.target)) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showExportMenu]);
 
   // Collapsible Grouping State
   const [expandedYears, setExpandedYears] = useState({ [new Date().getFullYear()]: true });
@@ -1086,7 +1099,7 @@ function App() {
                   ))}
                 </select>
               </div>
-              <div style={{ flex: 1, minWidth: '150px', alignSelf: 'flex-end', position: 'relative' }}>
+              <div ref={exportRef} style={{ flex: 1, minWidth: '150px', alignSelf: 'flex-end', position: 'relative' }}>
                 <button
                   type="button"
                   className="btn"
