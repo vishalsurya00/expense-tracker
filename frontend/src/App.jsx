@@ -719,6 +719,14 @@ function App() {
   const exportToPDF = () => {
     const doc = new jsPDF();
 
+    const formatCurrencyPDF = (val) => {
+      const formattedNum = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(val || 0);
+      return `Rs. ${formattedNum}`;
+    };
+
     // Title
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(20);
@@ -760,9 +768,9 @@ function App() {
         dateStr,
         entry.details || '',
         entry.category || 'Other',
-        entry.debited > 0 ? formatCurrency(entry.debited) : '-',
-        entry.credited > 0 ? formatCurrency(entry.credited) : '-',
-        formatCurrency(entry.balance)
+        entry.debited > 0 ? formatCurrencyPDF(entry.debited) : '-',
+        entry.credited > 0 ? formatCurrencyPDF(entry.credited) : '-',
+        formatCurrencyPDF(entry.balance)
       ];
     });
 
@@ -779,14 +787,17 @@ function App() {
       },
       styles: {
         font: 'helvetica',
-        fontSize: 9,
+        fontSize: 8,
         cellPadding: 3,
         textColor: [51, 65, 85]
       },
       columnStyles: {
-        3: { halign: 'right' },
-        4: { halign: 'right' },
-        5: { halign: 'right' }
+        0: { cellWidth: 26 },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 26 },
+        3: { cellWidth: 30, halign: 'right' },
+        4: { cellWidth: 30, halign: 'right' },
+        5: { cellWidth: 30, halign: 'right' }
       }
     });
 
@@ -799,9 +810,9 @@ function App() {
     doc.setFontSize(11);
     doc.setTextColor(30, 41, 59);
 
-    doc.text(`Total Credited: ${formatCurrency(exportCredited)}`, 14, finalY);
-    doc.text(`Total Debited: ${formatCurrency(exportDebited)}`, 14, finalY + 7);
-    doc.text(`Net Balance: ${formatCurrency(exportNet)}`, 14, finalY + 14);
+    doc.text(`Total Credited: ${formatCurrencyPDF(exportCredited)}`, 14, finalY);
+    doc.text(`Total Debited: ${formatCurrencyPDF(exportDebited)}`, 14, finalY + 7);
+    doc.text(`Net Balance: ${formatCurrencyPDF(exportNet)}`, 14, finalY + 14);
 
     const fileDateStr = new Date().toISOString().split('T')[0];
     doc.save(`expense-ledger-${fileDateStr}.pdf`);
