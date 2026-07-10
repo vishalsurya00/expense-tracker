@@ -835,12 +835,12 @@ function App() {
 
     const tableHeaderRow = new TableRow({
       children: [
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Date', bold: true, color: 'ffffff' })] })], backgroundColor: '4f46e5' }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Details', bold: true, color: 'ffffff' })] })], backgroundColor: '4f46e5' }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Category', bold: true, color: 'ffffff' })] })], backgroundColor: '4f46e5' }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Debited', bold: true, color: 'ffffff' })] })], backgroundColor: '4f46e5' }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Credited', bold: true, color: 'ffffff' })] })], backgroundColor: '4f46e5' }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Balance', bold: true, color: 'ffffff' })] })], backgroundColor: '4f46e5' })
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Date', bold: true, color: 'ffffff' })] })], shading: { fill: '4f46e5' } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Details', bold: true, color: 'ffffff' })] })], shading: { fill: '4f46e5' } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Category', bold: true, color: 'ffffff' })] })], shading: { fill: '4f46e5' } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Debited', bold: true, color: 'ffffff' })] })], shading: { fill: '4f46e5' } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Credited', bold: true, color: 'ffffff' })] })], shading: { fill: '4f46e5' } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Balance', bold: true, color: 'ffffff' })] })], shading: { fill: '4f46e5' } }),
       ]
     });
 
