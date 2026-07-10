@@ -19,6 +19,11 @@ const EntrySchema = new mongoose.Schema({
   },
   balance: {
     type: Number
+  },
+  category: {
+    type: String,
+    enum: ['Food', 'Travel', 'Bills', 'Shopping', 'Education', 'Health', 'Salary', 'Other'],
+    default: 'Other'
   }
 }, {
   timestamps: { createdAt: 'createdAt', updatedAt: false }

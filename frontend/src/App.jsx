@@ -7,11 +7,23 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+const CATEGORIES = [
+  'Food',
+  'Travel',
+  'Bills',
+  'Shopping',
+  'Education',
+  'Health',
+  'Salary',
+  'Other'
+];
+
 function App() {
   const [entries, setEntries] = useState([]);
   const [formData, setFormData] = useState({
     date: '',
     details: '',
+    category: 'Other',
     debited: '',
     credited: ''
   });
@@ -22,6 +34,16 @@ function App() {
   const [editValue, setEditValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Filters State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [filterCategory, setFilterCategory] = useState('All');
+
+  // Collapsible Grouping State
+  const [expandedYears, setExpandedYears] = useState({ [new Date().getFullYear()]: true });
+  const [expandedMonths, setExpandedMonths] = useState({});
 
   // Fetch entries from backend
   const fetchEntries = async () => {
@@ -65,6 +87,7 @@ function App() {
         body: JSON.stringify({
           date: formData.date,
           details: formData.details,
+          category: formData.category || 'Other',
           debited: formData.debited ? Number(formData.debited) : 0,
           credited: formData.credited ? Number(formData.credited) : 0
         })
@@ -75,7 +98,7 @@ function App() {
         throw new Error(errData.error || 'Failed to create entry.');
       }
 
-      setFormData({ date: '', details: '', debited: '', credited: '' });
+      setFormData({ date: '', details: '', category: 'Other', debited: '', credited: '' });
       fetchEntries();
     } catch (err) {
       alert(err.message);
@@ -93,28 +116,28 @@ function App() {
   };
 
   // Save changes and trigger balance recalculation
-  const handleSaveCell = async (id, field) => {
-    if (!editingCell) return;
+  const handleSaveCell = async (id, field, value) => {
     const entry = entries.find((e) => e._id === id);
     if (!entry) return;
 
     // Validation
-    if (field === 'details' && !editValue.trim()) {
+    if (field === 'details' && !String(value).trim()) {
       alert('Details cannot be empty.');
       setEditingCell(null);
       return;
     }
-    if (field === 'date' && !editValue) {
+    if (field === 'date' && !value) {
       alert('Date cannot be empty.');
       setEditingCell(null);
       return;
     }
 
     const updatedBody = {
-      date: field === 'date' ? editValue : entry.date,
-      details: field === 'details' ? editValue : entry.details,
-      debited: field === 'debited' ? Number(editValue || 0) : entry.debited,
-      credited: field === 'credited' ? Number(editValue || 0) : entry.credited
+      date: field === 'date' ? value : entry.date,
+      details: field === 'details' ? value : entry.details,
+      category: field === 'category' ? value : entry.category,
+      debited: field === 'debited' ? Number(value || 0) : entry.debited,
+      credited: field === 'credited' ? Number(value || 0) : entry.credited
     };
 
     try {
@@ -139,7 +162,7 @@ function App() {
 
   const handleKeyDown = (e, id, field) => {
     if (e.key === 'Enter') {
-      handleSaveCell(id, field);
+      handleSaveCell(id, field, editValue);
     } else if (e.key === 'Escape') {
       setEditingCell(null);
     }
@@ -183,6 +206,28 @@ function App() {
       day: 'numeric',
       timeZone: 'UTC'
     });
+  };
+
+  // Toggle year collapse/expansion and its nested months
+  const toggleYear = (y, groupedEntries) => {
+    const isYearExpanded = !!expandedYears[y];
+    setExpandedYears((prev) => ({ ...prev, [y]: !isYearExpanded }));
+
+    // Collapses/expands all its months
+    const monthsInYear = Object.keys(groupedEntries[y] || {});
+    setExpandedMonths((prev) => {
+      const updated = { ...prev };
+      monthsInYear.forEach((mIdx) => {
+        updated[`${y}-${mIdx}`] = !isYearExpanded;
+      });
+      return updated;
+    });
+  };
+
+  // Toggle single month expansion
+  const toggleMonth = (y, m) => {
+    const key = `${y}-${m}`;
+    setExpandedMonths((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   // Global totals (overall ledger)
@@ -235,6 +280,176 @@ function App() {
       balance
     };
   });
+
+  // --- Filtering Logic (AND logic) ---
+  const filteredEntries = entries.filter((entry) => {
+    // Details search (case-insensitive, partial match)
+    if (searchQuery.trim()) {
+      const match = entry.details && entry.details.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!match) return false;
+    }
+
+    // Date range filter
+    if (startDate) {
+      const dStr = new Date(entry.date).toISOString().split('T')[0];
+      if (dStr < startDate) return false;
+    }
+    if (endDate) {
+      const dStr = new Date(entry.date).toISOString().split('T')[0];
+      if (dStr > endDate) return false;
+    }
+
+    // Category filter
+    if (filterCategory !== 'All') {
+      if (entry.category !== filterCategory) return false;
+    }
+
+    return true;
+  });
+
+  const isFilterActive = !!searchQuery.trim() || !!startDate || !!endDate || filterCategory !== 'All';
+
+  // --- Grouping Logic for Collapsible View ---
+  const groupedEntries = {}; // y -> m -> entries list
+  filteredEntries.forEach((entry) => {
+    const d = new Date(entry.date);
+    const y = d.getUTCFullYear();
+    const m = d.getUTCMonth();
+    if (!groupedEntries[y]) groupedEntries[y] = {};
+    if (!groupedEntries[y][m]) groupedEntries[y][m] = [];
+    groupedEntries[y][m].push(entry);
+  });
+
+  const sortedYears = Object.keys(groupedEntries).map(Number).sort((a, b) => b - a);
+
+  // Table Render Helper
+  const renderTable = (entriesList) => (
+    <table className="ledger-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Details</th>
+          <th>Category</th>
+          <th>Debited</th>
+          <th>Credited</th>
+          <th>Balance</th>
+          <th style={{ textAlign: 'center' }}>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {entriesList.map((entry) => (
+          <tr key={entry._id}>
+            {/* Date */}
+            <td className="editable-cell" onClick={() => handleCellClick(entry, 'date', entry.date)}>
+              {editingCell && editingCell.id === entry._id && editingCell.field === 'date' ? (
+                <input
+                  type="date"
+                  className="cell-edit-input"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={() => handleSaveCell(entry._id, 'date', editValue)}
+                  onKeyDown={(e) => handleKeyDown(e, entry._id, 'date')}
+                  autoFocus
+                />
+              ) : (
+                formatDateDisplay(entry.date)
+              )}
+            </td>
+
+            {/* Details */}
+            <td className="editable-cell" onClick={() => handleCellClick(entry, 'details', entry.details)}>
+              {editingCell && editingCell.id === entry._id && editingCell.field === 'details' ? (
+                <input
+                  type="text"
+                  className="cell-edit-input"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={() => handleSaveCell(entry._id, 'details', editValue)}
+                  onKeyDown={(e) => handleKeyDown(e, entry._id, 'details')}
+                  autoFocus
+                />
+              ) : (
+                entry.details
+              )}
+            </td>
+
+            {/* Category */}
+            <td className="editable-cell" onClick={() => handleCellClick(entry, 'category', entry.category)}>
+              {editingCell && editingCell.id === entry._id && editingCell.field === 'category' ? (
+                <select
+                  className="cell-edit-input"
+                  style={{ appearance: 'auto' }}
+                  value={editValue}
+                  onChange={(e) => {
+                    setEditValue(e.target.value);
+                    handleSaveCell(entry._id, 'category', e.target.value);
+                  }}
+                  onBlur={() => handleSaveCell(entry._id, 'category', editValue)}
+                  autoFocus
+                >
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              ) : (
+                entry.category || 'Other'
+              )}
+            </td>
+
+            {/* Debited */}
+            <td className="editable-cell text-debit" onClick={() => handleCellClick(entry, 'debited', entry.debited)}>
+              {editingCell && editingCell.id === entry._id && editingCell.field === 'debited' ? (
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  className="cell-edit-input"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={() => handleSaveCell(entry._id, 'debited', editValue)}
+                  onKeyDown={(e) => handleKeyDown(e, entry._id, 'debited')}
+                  autoFocus
+                />
+              ) : (
+                entry.debited > 0 ? formatCurrency(entry.debited) : '-'
+              )}
+            </td>
+
+            {/* Credited */}
+            <td className="editable-cell text-credit" onClick={() => handleCellClick(entry, 'credited', entry.credited)}>
+              {editingCell && editingCell.id === entry._id && editingCell.field === 'credited' ? (
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  className="cell-edit-input"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={() => handleSaveCell(entry._id, 'credited', editValue)}
+                  onKeyDown={(e) => handleKeyDown(e, entry._id, 'credited')}
+                  autoFocus
+                />
+              ) : (
+                entry.credited > 0 ? formatCurrency(entry.credited) : '-'
+              )}
+            </td>
+
+            {/* Balance */}
+            <td className={entry.balance >= 0 ? 'text-balance-positive' : 'text-balance-negative'}>
+              {formatCurrency(entry.balance)}
+            </td>
+
+            {/* Delete */}
+            <td style={{ textAlign: 'center' }}>
+              <button className="btn-delete" onClick={() => handleDelete(entry._id)}>
+                Delete
+              </button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 
   return (
     <div className="app-container">
@@ -319,6 +534,21 @@ function App() {
                 />
               </div>
               <div className="form-group">
+                <label className="form-label" htmlFor="category">Category</label>
+                <select
+                  id="category"
+                  name="category"
+                  className="form-input"
+                  style={{ appearance: 'auto', paddingRight: '2rem' }}
+                  value={formData.category}
+                  onChange={handleInputChange}
+                >
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
                 <label className="form-label" htmlFor="debited">Debited</label>
                 <input
                   type="number"
@@ -350,6 +580,68 @@ function App() {
             </form>
           </section>
 
+          {/* Search & Filter Section */}
+          <section className="form-panel" style={{ padding: '1.5rem' }}>
+            <h2 className="panel-title" style={{ fontSize: '1.15rem', marginBottom: '1rem' }}>Search & Filter Transactions</h2>
+            <div className="filter-bar">
+              <div className="form-group" style={{ flex: 2, minWidth: '220px' }}>
+                <label className="form-label">Search Details</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Type to search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                <label className="form-label">From Date</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                <label className="form-label">To Date</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+              <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                <label className="form-label">Category</label>
+                <select
+                  className="form-input"
+                  style={{ appearance: 'auto', paddingRight: '2rem' }}
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                >
+                  <option value="All">All Categories</option>
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setSearchQuery('');
+                  setStartDate('');
+                  setEndDate('');
+                  setFilterCategory('All');
+                }}
+                style={{ alignSelf: 'flex-end', height: '42px', padding: '0 1rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}
+              >
+                Clear
+              </button>
+            </div>
+          </section>
+
           {/* Error messages */}
           {error && (
             <div style={{ color: 'var(--danger)', padding: '1rem', background: 'var(--danger-glow)', borderRadius: '10px', border: '1px solid var(--danger)' }}>
@@ -357,129 +649,91 @@ function App() {
             </div>
           )}
 
-          {/* Ledger Table Section */}
-          <section className="table-panel">
-            <div className="table-responsive">
-              <table className="ledger-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Details</th>
-                    <th>Debited</th>
-                    <th>Credited</th>
-                    <th>Balance</th>
-                    <th style={{ textAlign: 'center' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && entries.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', padding: '3rem' }}>
-                        Loading financial ledger...
-                      </td>
-                    </tr>
-                  ) : entries.length === 0 ? (
-                    <tr>
-                      <td colSpan="6">
-                        <div className="empty-state">
-                          <div className="empty-icon">📭</div>
-                          <p>No transactions registered yet. Add one above to begin tracking.</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    entries.map((entry) => (
-                      <tr key={entry._id}>
-                        {/* Date */}
-                        <td className="editable-cell" onClick={() => handleCellClick(entry, 'date', entry.date)}>
-                          {editingCell && editingCell.id === entry._id && editingCell.field === 'date' ? (
-                            <input
-                              type="date"
-                              className="cell-edit-input"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onBlur={() => handleSaveCell(entry._id, 'date')}
-                              onKeyDown={(e) => handleKeyDown(e, entry._id, 'date')}
-                              autoFocus
-                            />
-                          ) : (
-                            formatDateDisplay(entry.date)
-                          )}
-                        </td>
-
-                        {/* Details */}
-                        <td className="editable-cell" onClick={() => handleCellClick(entry, 'details', entry.details)}>
-                          {editingCell && editingCell.id === entry._id && editingCell.field === 'details' ? (
-                            <input
-                              type="text"
-                              className="cell-edit-input"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onBlur={() => handleSaveCell(entry._id, 'details')}
-                              onKeyDown={(e) => handleKeyDown(e, entry._id, 'details')}
-                              autoFocus
-                            />
-                          ) : (
-                            entry.details
-                          )}
-                        </td>
-
-                        {/* Debited */}
-                        <td className="editable-cell text-debit" onClick={() => handleCellClick(entry, 'debited', entry.debited)}>
-                          {editingCell && editingCell.id === entry._id && editingCell.field === 'debited' ? (
-                            <input
-                              type="number"
-                              step="any"
-                              min="0"
-                              className="cell-edit-input"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onBlur={() => handleSaveCell(entry._id, 'debited')}
-                              onKeyDown={(e) => handleKeyDown(e, entry._id, 'debited')}
-                              autoFocus
-                            />
-                          ) : (
-                            entry.debited > 0 ? formatCurrency(entry.debited) : '-'
-                          )}
-                        </td>
-
-                        {/* Credited */}
-                        <td className="editable-cell text-credit" onClick={() => handleCellClick(entry, 'credited', entry.credited)}>
-                          {editingCell && editingCell.id === entry._id && editingCell.field === 'credited' ? (
-                            <input
-                              type="number"
-                              step="any"
-                              min="0"
-                              className="cell-edit-input"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onBlur={() => handleSaveCell(entry._id, 'credited')}
-                              onKeyDown={(e) => handleKeyDown(e, entry._id, 'credited')}
-                              autoFocus
-                            />
-                          ) : (
-                            entry.credited > 0 ? formatCurrency(entry.credited) : '-'
-                          )}
-                        </td>
-
-                        {/* Balance */}
-                        <td className={entry.balance >= 0 ? 'text-balance-positive' : 'text-balance-negative'}>
-                          {formatCurrency(entry.balance)}
-                        </td>
-
-                        {/* Delete */}
-                        <td style={{ textAlign: 'center' }}>
-                          <button className="btn-delete" onClick={() => handleDelete(entry._id)}>
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+          {/* Ledger Table / Collapsible tree Section */}
+          {loading && entries.length === 0 ? (
+            <section className="table-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              Loading financial ledger...
+            </section>
+          ) : filteredEntries.length === 0 ? (
+            <section className="table-panel">
+              <div className="empty-state">
+                <div className="empty-icon">📭</div>
+                <p>No matching transactions found.</p>
+              </div>
+            </section>
+          ) : isFilterActive ? (
+            /* ACTIVE FILTERS: Flat table layout */
+            <div className="table-panel">
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 className="panel-title" style={{ margin: 0, fontSize: '1.1rem' }}>Filtered Results ({filteredEntries.length})</h2>
+              </div>
+              <div className="table-responsive">
+                {renderTable(filteredEntries)}
+              </div>
             </div>
-          </section>
+          ) : (
+            /* INACTIVE FILTERS: Collapsible Year -> Month grouping */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {sortedYears.map((year) => {
+                const isYearExpanded = !!expandedYears[year];
+                const yearMonths = Object.keys(groupedEntries[year]).map(Number).sort((a, b) => b - a);
+
+                return (
+                  <div key={year} className="year-section">
+                    <div className="year-header" onClick={() => toggleYear(year, groupedEntries)}>
+                      <span className="year-title">{year}</span>
+                      <span className="year-toggle-icon" style={{ transform: isYearExpanded ? 'rotate(90deg)' : 'rotate(0)' }}>
+                        ▶
+                      </span>
+                    </div>
+
+                    {isYearExpanded && (
+                      <div className="year-body">
+                        {yearMonths.map((mIdx) => {
+                          const isMonthExpanded = !!expandedMonths[`${year}-${mIdx}`];
+                          const monthEntries = groupedEntries[year][mIdx];
+
+                          const mCredited = monthEntries.reduce((sum, e) => sum + (e.credited || 0), 0);
+                          const mDebited = monthEntries.reduce((sum, e) => sum + (e.debited || 0), 0);
+                          const mBalance = mCredited - mDebited;
+
+                          return (
+                            <div key={mIdx} className="month-section" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                              <div className="month-row" onClick={() => toggleMonth(year, mIdx)}>
+                                <span className="month-name">{MONTHS[mIdx]}</span>
+                                <div className="month-summary-metrics">
+                                  <div className="month-metric text-credit">
+                                    <span>Income:</span>
+                                    <span>{mCredited > 0 ? formatCurrency(mCredited) : '-'}</span>
+                                  </div>
+                                  <div className="month-metric text-debit">
+                                    <span>Expenses:</span>
+                                    <span>{mDebited > 0 ? formatCurrency(mDebited) : '-'}</span>
+                                  </div>
+                                  <div className={`month-metric ${mBalance >= 0 ? 'text-balance-positive' : 'text-balance-negative'}`}>
+                                    <span>Net:</span>
+                                    <span>{formatCurrency(mBalance)}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {isMonthExpanded && (
+                                <div className="month-body table-panel">
+                                  <div className="table-responsive">
+                                    {renderTable(monthEntries)}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </>
       ) : (
         /* Summary Tab view */
