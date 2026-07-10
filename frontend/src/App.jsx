@@ -971,34 +971,6 @@ function App() {
 
       {activeTab === 'ledger' ? (
         <>
-          {/* Stats Cards Dashboard */}
-          <section className="stats-grid">
-            <div className="stat-card">
-              <span className="stat-label">Net Balance</span>
-              <span className={`stat-value ${totalBalance >= 0 ? 'balance-positive' : 'balance-negative'}`}>
-                {formatCurrency(totalBalance)}
-              </span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Total Credited</span>
-              <span className="stat-value credit">
-                {formatCurrency(totalCredited)}
-              </span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Total Debited</span>
-              <span className="stat-value debit">
-                {formatCurrency(totalDebited)}
-              </span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Total Transactions</span>
-              <span className="stat-value">
-                {entries.length}
-              </span>
-            </div>
-          </section>
-
           {/* Form Section */}
           <section className="form-panel">
             <h2 className="panel-title">Add New Transaction</h2>
