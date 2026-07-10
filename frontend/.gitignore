@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Explicitly ignore build output
+frontend/dist/
+dist/
+
