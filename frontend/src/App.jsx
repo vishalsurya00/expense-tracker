@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import {
+  Document,
+  Packer,
+  Paragraph,
+  Table,
+  TableRow,
+  TableCell,
+  TextRun,
+  AlignmentType,
+  WidthType,
+  BorderStyle
+} from 'docx';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -258,6 +272,7 @@ function App() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [filterCategory, setFilterCategory] = useState('All');
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   // Collapsible Grouping State
   const [expandedYears, setExpandedYears] = useState({ [new Date().getFullYear()]: true });
@@ -701,6 +716,219 @@ function App() {
     </table>
   );
 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(30, 41, 59);
+    doc.text('Expense Ledger Report', 14, 20);
+
+    // Meta
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    const todayStr = new Date().toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+    doc.text(`Exported On: ${todayStr}`, 14, 28);
+
+    let filterMeta = 'Filters: None';
+    const filterParts = [];
+    if (searchQuery.trim()) filterParts.push(`Search: "${searchQuery}"`);
+    if (isStartDateActive) filterParts.push(`From: ${startDate}`);
+    if (isEndDateActive) filterParts.push(`To: ${endDate}`);
+    if (filterCategory !== 'All') filterParts.push(`Category: ${filterCategory}`);
+    if (filterParts.length > 0) filterMeta = `Filters: ${filterParts.join(' | ')}`;
+    doc.text(filterMeta, 14, 34);
+
+    // Format headers and data
+    const headers = [['Date', 'Details', 'Category', 'Debited', 'Credited', 'Balance']];
+    const data = filteredEntries.map((entry) => {
+      let dateStr = '';
+      if (entry.date) {
+        const d = new Date(entry.date);
+        const dayVal = String(d.getUTCDate()).padStart(2, '0');
+        const monthVal = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const yearVal = d.getUTCFullYear();
+        dateStr = `${dayVal}-${monthVal}-${yearVal}`;
+      }
+      return [
+        dateStr,
+        entry.details || '',
+        entry.category || 'Other',
+        entry.debited > 0 ? formatCurrency(entry.debited) : '-',
+        entry.credited > 0 ? formatCurrency(entry.credited) : '-',
+        formatCurrency(entry.balance)
+      ];
+    });
+
+    doc.autoTable({
+      startY: 40,
+      head: headers,
+      body: data,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [79, 70, 229], // Indigo-600
+        textColor: [255, 255, 255],
+        fontSize: 10,
+        fontStyle: 'bold'
+      },
+      styles: {
+        font: 'helvetica',
+        fontSize: 9,
+        cellPadding: 3,
+        textColor: [51, 65, 85]
+      },
+      columnStyles: {
+        3: { halign: 'right' },
+        4: { halign: 'right' },
+        5: { halign: 'right' }
+      }
+    });
+
+    const finalY = doc.previousAutoTable.finalY + 15;
+    const exportCredited = filteredEntries.reduce((sum, e) => sum + (e.credited || 0), 0);
+    const exportDebited = filteredEntries.reduce((sum, e) => sum + (e.debited || 0), 0);
+    const exportNet = exportCredited - exportDebited;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(30, 41, 59);
+
+    doc.text(`Total Credited: ${formatCurrency(exportCredited)}`, 14, finalY);
+    doc.text(`Total Debited: ${formatCurrency(exportDebited)}`, 14, finalY + 7);
+    doc.text(`Net Balance: ${formatCurrency(exportNet)}`, 14, finalY + 14);
+
+    const fileDateStr = new Date().toISOString().split('T')[0];
+    doc.save(`expense-ledger-${fileDateStr}.pdf`);
+  };
+
+  const exportToWord = async () => {
+    const todayStr = new Date().toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+
+    let filterMeta = 'Filters: None';
+    const filterParts = [];
+    if (searchQuery.trim()) filterParts.push(`Search: "${searchQuery}"`);
+    if (isStartDateActive) filterParts.push(`From: ${startDate}`);
+    if (isEndDateActive) filterParts.push(`To: ${endDate}`);
+    if (filterCategory !== 'All') filterParts.push(`Category: ${filterCategory}`);
+    if (filterParts.length > 0) filterMeta = `Filters: ${filterParts.join(' | ')}`;
+
+    const tableHeaderRow = new TableRow({
+      children: [
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Date', bold: true, color: 'ffffff' })] })], backgroundColor: '4f46e5' }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Details', bold: true, color: 'ffffff' })] })], backgroundColor: '4f46e5' }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Category', bold: true, color: 'ffffff' })] })], backgroundColor: '4f46e5' }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Debited', bold: true, color: 'ffffff' })] })], backgroundColor: '4f46e5' }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Credited', bold: true, color: 'ffffff' })] })], backgroundColor: '4f46e5' }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Balance', bold: true, color: 'ffffff' })] })], backgroundColor: '4f46e5' })
+      ]
+    });
+
+    const dataRows = filteredEntries.map((entry) => {
+      let dateStr = '';
+      if (entry.date) {
+        const d = new Date(entry.date);
+        const dayVal = String(d.getUTCDate()).padStart(2, '0');
+        const monthVal = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const yearVal = d.getUTCFullYear();
+        dateStr = `${dayVal}-${monthVal}-${yearVal}`;
+      }
+
+      return new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ text: dateStr })] }),
+          new TableCell({ children: [new Paragraph({ text: entry.details || '' })] }),
+          new TableCell({ children: [new Paragraph({ text: entry.category || 'Other' })] }),
+          new TableCell({ children: [new Paragraph({ text: entry.debited > 0 ? formatCurrency(entry.debited) : '-', alignment: AlignmentType.RIGHT })] }),
+          new TableCell({ children: [new Paragraph({ text: entry.credited > 0 ? formatCurrency(entry.credited) : '-', alignment: AlignmentType.RIGHT })] }),
+          new TableCell({ children: [new Paragraph({ text: formatCurrency(entry.balance), alignment: AlignmentType.RIGHT })] })
+        ]
+      });
+    });
+
+    const docTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [tableHeaderRow, ...dataRows],
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 4, color: 'cccccc' },
+        bottom: { style: BorderStyle.SINGLE, size: 4, color: 'cccccc' },
+        left: { style: BorderStyle.SINGLE, size: 4, color: 'cccccc' },
+        right: { style: BorderStyle.SINGLE, size: 4, color: 'cccccc' },
+        insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: 'e2e8f0' },
+        insideVertical: { style: BorderStyle.SINGLE, size: 4, color: 'e2e8f0' }
+      }
+    });
+
+    const exportCredited = filteredEntries.reduce((sum, e) => sum + (e.credited || 0), 0);
+    const exportDebited = filteredEntries.reduce((sum, e) => sum + (e.debited || 0), 0);
+    const exportNet = exportCredited - exportDebited;
+
+    const doc = new Document({
+      sections: [
+        {
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: 'Expense Ledger Report', bold: true, size: 32, color: '1e293b' })],
+              alignment: AlignmentType.CENTER
+            }),
+            new Paragraph({
+              children: [new TextRun({ text: `Exported On: ${todayStr}`, color: '64748b', size: 20 })],
+              alignment: AlignmentType.CENTER
+            }),
+            new Paragraph({
+              children: [new TextRun({ text: filterMeta, color: '64748b', size: 18 })],
+              alignment: AlignmentType.CENTER
+            }),
+            new Paragraph({ text: '' }),
+            docTable,
+            new Paragraph({ text: '' }),
+            new Paragraph({
+              children: [new TextRun({ text: 'Report Summary', bold: true, size: 24, color: '1e293b' })]
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: 'Total Credited (Income): ', bold: true, color: '10b981' }),
+                new TextRun({ text: formatCurrency(exportCredited) })
+              ]
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: 'Total Debited (Expenses): ', bold: true, color: 'ef4444' }),
+                new TextRun({ text: formatCurrency(exportDebited) })
+              ]
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: 'Net Balance: ', bold: true, color: exportNet >= 0 ? '10b981' : 'ef4444' }),
+                new TextRun({ text: formatCurrency(exportNet), bold: true })
+              ]
+            })
+          ]
+        }
+      ]
+    });
+
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const fileDateStr = new Date().toISOString().split('T')[0];
+    a.download = `expense-ledger-${fileDateStr}.docx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="app-container">
       <header className="app-header">
@@ -875,6 +1103,27 @@ function App() {
                   ))}
                 </select>
               </div>
+              <div style={{ flex: 1, minWidth: '150px', alignSelf: 'flex-end', position: 'relative' }}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  style={{ width: '100%', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary)', border: '1px solid rgba(99, 102, 241, 0.3)', padding: '0 0.75rem' }}
+                >
+                  📥 Export
+                </button>
+                {showExportMenu && (
+                  <div className="export-dropdown-menu">
+                    <button type="button" className="dropdown-item" onClick={() => { exportToPDF(); setShowExportMenu(false); }}>
+                      Export as PDF
+                    </button>
+                    <button type="button" className="dropdown-item" onClick={() => { exportToWord(); setShowExportMenu(false); }}>
+                      Export as Word (.docx)
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <button
                 type="button"
                 className="btn"
