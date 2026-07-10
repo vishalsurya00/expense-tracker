@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -29,6 +29,185 @@ const COLORS = {
   Salary: '#10B981',    // Emerald
   Other: '#64748B'      // Slate
 };
+
+// Custom Date Picker component (DD / MM / YYYY)
+function CustomDatePicker({ value, onChange, onBlur, id, className, autoFocus }) {
+  const [day, setDay] = useState('');
+  const [month, setMonth] = useState('');
+  const [year, setYear] = useState('');
+
+  const dayRef = useRef(null);
+  const monthRef = useRef(null);
+  const yearRef = useRef(null);
+
+  // Sync internal state with external YYYY-MM-DD value
+  useEffect(() => {
+    if (value) {
+      const parts = value.split('-');
+      if (parts.length === 3) {
+        setYear(parts[0] || '');
+        setMonth(parts[1] || '');
+        setDay(parts[2] || '');
+        return;
+      }
+    }
+    setYear('');
+    setMonth('');
+    setDay('');
+  }, [value]);
+
+  // Combine fields and call parent onChange
+  const updateParent = (d, m, y) => {
+    if (!d && !m && !y) {
+      onChange('');
+      return;
+    }
+    const formattedY = y.padEnd(4, '0').slice(0, 4);
+    const formattedM = m.padStart(2, '0').slice(0, 2);
+    const formattedD = d.padStart(2, '0').slice(0, 2);
+    onChange(`${formattedY}-${formattedM}-${formattedD}`);
+  };
+
+  const validateAndFormat = (d, m, y) => {
+    let cleanDay = d;
+    let cleanMonth = m;
+    let cleanYear = y;
+
+    if (d) {
+      const numericDay = parseInt(d, 10);
+      if (isNaN(numericDay) || numericDay < 1) cleanDay = '01';
+      else if (numericDay > 31) cleanDay = '31';
+      else cleanDay = String(numericDay).padStart(2, '0');
+    }
+    if (m) {
+      const numericMonth = parseInt(m, 10);
+      if (isNaN(numericMonth) || numericMonth < 1) cleanMonth = '01';
+      else if (numericMonth > 12) cleanMonth = '12';
+      else cleanMonth = String(numericMonth).padStart(2, '0');
+    }
+    if (y) {
+      const numericYear = parseInt(y, 10);
+      if (isNaN(numericYear) || numericYear < 1900) cleanYear = '1900';
+      else if (numericYear > 2100) cleanYear = '2100';
+      else cleanYear = String(numericYear);
+    }
+
+    return { cleanDay, cleanMonth, cleanYear };
+  };
+
+  // Check if focus has left the custom date picker container entirely
+  const handleContainerBlur = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      const { cleanDay, cleanMonth, cleanYear } = validateAndFormat(day, month, year);
+      
+      setDay(cleanDay);
+      setMonth(cleanMonth);
+      setYear(cleanYear);
+
+      const combined = (cleanDay || cleanMonth || cleanYear) ? 
+        `${cleanYear.padEnd(4, '0')}-${cleanMonth.padStart(2, '0')}-${cleanDay.padStart(2, '0')}` : '';
+      
+      onBlur?.(combined);
+    }
+  };
+
+  const handleDayChange = (e) => {
+    const val = e.target.value.replace(/\D/g, ''); // Digits only
+    if (val.length <= 2) {
+      setDay(val);
+      updateParent(val, month, year);
+      if (val.length === 2) {
+        monthRef.current?.focus();
+      }
+    }
+  };
+
+  const handleMonthChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    if (val.length <= 2) {
+      setMonth(val);
+      updateParent(day, val, year);
+      if (val.length === 2) {
+        yearRef.current?.focus();
+      }
+    }
+  };
+
+  const handleYearChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    if (val.length <= 4) {
+      setYear(val);
+      updateParent(day, month, val);
+    }
+  };
+
+  const handleKeyDown = (field, e) => {
+    if (e.key === 'Backspace') {
+      if (field === 'month' && !month) {
+        dayRef.current?.focus();
+      } else if (field === 'year' && !year) {
+        monthRef.current?.focus();
+      }
+    } else if (e.key === 'Enter') {
+      const { cleanDay, cleanMonth, cleanYear } = validateAndFormat(day, month, year);
+      setDay(cleanDay);
+      setMonth(cleanMonth);
+      setYear(cleanYear);
+      
+      const combined = (cleanDay || cleanMonth || cleanYear) ? 
+        `${cleanYear.padEnd(4, '0')}-${cleanMonth.padStart(2, '0')}-${cleanDay.padStart(2, '0')}` : '';
+      
+      onChange(combined);
+      onBlur?.(combined);
+    } else if (e.key === 'Escape') {
+      onBlur?.(value);
+    } else if (field === 'year') {
+      const isDigit = /^[0-9]$/.test(e.key);
+      const isSelectionActive = e.target.selectionStart !== e.target.selectionEnd;
+      if (year.length >= 4 && isDigit && !isSelectionActive) {
+        e.preventDefault();
+      }
+    }
+  };
+
+  return (
+    <div className={`custom-date-picker ${className || ''}`} id={id} onBlur={handleContainerBlur}>
+      <input
+        ref={dayRef}
+        type="text"
+        placeholder="DD"
+        value={day}
+        onChange={handleDayChange}
+        onKeyDown={(e) => handleKeyDown('day', e)}
+        className="date-input-field day-input"
+        maxLength={2}
+        autoFocus={autoFocus}
+      />
+      <span className="date-separator">/</span>
+      <input
+        ref={monthRef}
+        type="text"
+        placeholder="MM"
+        value={month}
+        onChange={handleMonthChange}
+        onKeyDown={(e) => handleKeyDown('month', e)}
+        className="date-input-field month-input"
+        maxLength={2}
+      />
+      <span className="date-separator">/</span>
+      <input
+        ref={yearRef}
+        type="text"
+        placeholder="YYYY"
+        value={year}
+        onChange={handleYearChange}
+        onKeyDown={(e) => handleKeyDown('year', e)}
+        className="date-input-field year-input"
+        maxLength={4}
+      />
+    </div>
+  );
+}
 
 function App() {
   const [entries, setEntries] = useState([]);
@@ -398,16 +577,11 @@ function App() {
             {/* Date */}
             <td className="editable-cell" onClick={() => handleCellClick(entry, 'date', entry.date)}>
               {editingCell && editingCell.id === entry._id && editingCell.field === 'date' ? (
-                <input
-                  type="date"
-                  min="1900-01-01"
-                  max="2100-12-31"
+                <CustomDatePicker
                   className="cell-edit-input"
                   value={editValue}
-                  onInput={(e) => handleDateOnInput(e, setEditValue)}
-                  onChange={(e) => handleDateOnInput(e, setEditValue)}
-                  onBlur={() => handleSaveCell(entry._id, 'date', editValue)}
-                  onKeyDown={(e) => handleKeyDown(e, entry._id, 'date')}
+                  onChange={setEditValue}
+                  onBlur={(val) => handleSaveCell(entry._id, 'date', val)}
                   autoFocus
                 />
               ) : (
@@ -575,17 +749,11 @@ function App() {
             <form onSubmit={handleSubmit} className="entry-form">
               <div className="form-group">
                 <label className="form-label" htmlFor="date">Date</label>
-                <input
-                  type="date"
+                <CustomDatePicker
                   id="date"
-                  name="date"
-                  min="1900-01-01"
-                  max="2100-12-31"
-                  className="form-input"
+                  className="form-input-date-container"
                   value={formData.date}
-                  onInput={(e) => handleDateOnInput(e, (val) => setFormData((prev) => ({ ...prev, date: val })))}
-                  onChange={(e) => handleDateOnInput(e, (val) => setFormData((prev) => ({ ...prev, date: val })))}
-                  required
+                  onChange={(val) => setFormData((prev) => ({ ...prev, date: val }))}
                 />
               </div>
               <div className="form-group">
@@ -664,26 +832,16 @@ function App() {
               </div>
               <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
                 <label className="form-label">From Date</label>
-                <input
-                  type="date"
-                  min="1900-01-01"
-                  max="2100-12-31"
-                  className="form-input"
+                <CustomDatePicker
                   value={startDate}
-                  onInput={(e) => handleDateOnInput(e, setStartDate)}
-                  onChange={(e) => handleDateOnInput(e, setStartDate)}
+                  onChange={setStartDate}
                 />
               </div>
               <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
                 <label className="form-label">To Date</label>
-                <input
-                  type="date"
-                  min="1900-01-01"
-                  max="2100-12-31"
-                  className="form-input"
+                <CustomDatePicker
                   value={endDate}
-                  onInput={(e) => handleDateOnInput(e, setEndDate)}
-                  onChange={(e) => handleDateOnInput(e, setEndDate)}
+                  onChange={setEndDate}
                 />
               </div>
               <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>

@@ -505,6 +505,67 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Custom Date Picker Split Fields */
+.custom-date-picker {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  gap: 0.25rem;
+  transition: var(--transition);
+  max-width: 100%;
+}
+
+.custom-date-picker:focus-within {
+  border-color: var(--glass-border-focus);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.date-input-field {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  text-align: center;
+  padding: 0;
+  outline: none;
+}
+
+.date-input-field::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.3;
+}
+
+.day-input {
+  width: 24px;
+}
+
+.month-input {
+  width: 26px;
+}
+
+.year-input {
+  width: 44px;
+}
+
+.date-separator {
+  color: var(--text-secondary);
+  opacity: 0.4;
+  font-size: 0.95rem;
+  user-select: none;
+}
+
+/* Ensure CustomDatePicker spans full width inside form-groups */
+.form-group .custom-date-picker {
+  width: 100%;
+  box-sizing: border-box;
+  height: 42px;
+}
+
 @media (max-width: 768px) {
   .entry-form {
     grid-template-columns: 1fr;
