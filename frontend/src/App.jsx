@@ -12,7 +12,6 @@ function App() {
   const [formData, setFormData] = useState({
     date: '',
     details: '',
-    notes: '',
     debited: '',
     credited: ''
   });
@@ -66,7 +65,6 @@ function App() {
         body: JSON.stringify({
           date: formData.date,
           details: formData.details,
-          notes: formData.notes,
           debited: formData.debited ? Number(formData.debited) : 0,
           credited: formData.credited ? Number(formData.credited) : 0
         })
@@ -77,7 +75,7 @@ function App() {
         throw new Error(errData.error || 'Failed to create entry.');
       }
 
-      setFormData({ date: '', details: '', notes: '', debited: '', credited: '' });
+      setFormData({ date: '', details: '', debited: '', credited: '' });
       fetchEntries();
     } catch (err) {
       alert(err.message);
@@ -115,7 +113,6 @@ function App() {
     const updatedBody = {
       date: field === 'date' ? editValue : entry.date,
       details: field === 'details' ? editValue : entry.details,
-      notes: field === 'notes' ? editValue : entry.notes,
       debited: field === 'debited' ? Number(editValue || 0) : entry.debited,
       credited: field === 'credited' ? Number(editValue || 0) : entry.credited
     };
@@ -209,6 +206,16 @@ function App() {
   const monthlyCredited = monthlyEntries.reduce((acc, curr) => acc + (curr.credited || 0), 0);
   const monthlyDebited = monthlyEntries.reduce((acc, curr) => acc + (curr.debited || 0), 0);
   const monthlyBalance = monthlyCredited - monthlyDebited;
+
+  // Yearly totals logic (for selectedYear)
+  const yearlyEntries = entries.filter((entry) => {
+    const d = new Date(entry.date);
+    return d.getUTCFullYear() === Number(selectedYear);
+  });
+
+  const yearlyCredited = yearlyEntries.reduce((acc, curr) => acc + (curr.credited || 0), 0);
+  const yearlyDebited = yearlyEntries.reduce((acc, curr) => acc + (curr.debited || 0), 0);
+  const yearlyBalance = yearlyCredited - yearlyDebited;
 
   // Yearly data array (12 months list for selectedYear)
   const yearlyData = MONTHS.map((monthName, index) => {
@@ -312,18 +319,6 @@ function App() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="notes">Notes</label>
-                <input
-                  type="text"
-                  id="notes"
-                  name="notes"
-                  className="form-input"
-                  placeholder="e.g. Weekly shop (optional)"
-                  value={formData.notes}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="form-group">
                 <label className="form-label" htmlFor="debited">Debited</label>
                 <input
                   type="number"
@@ -370,7 +365,6 @@ function App() {
                   <tr>
                     <th>Date</th>
                     <th>Details</th>
-                    <th>Notes</th>
                     <th>Debited</th>
                     <th>Credited</th>
                     <th>Balance</th>
@@ -380,13 +374,13 @@ function App() {
                 <tbody>
                   {loading && entries.length === 0 ? (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', padding: '3rem' }}>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '3rem' }}>
                         Loading financial ledger...
                       </td>
                     </tr>
                   ) : entries.length === 0 ? (
                     <tr>
-                      <td colSpan="7">
+                      <td colSpan="6">
                         <div className="empty-state">
                           <div className="empty-icon">📭</div>
                           <p>No transactions registered yet. Add one above to begin tracking.</p>
@@ -427,24 +421,6 @@ function App() {
                             />
                           ) : (
                             entry.details
-                          )}
-                        </td>
-
-                        {/* Notes (The 5th Editable Column) */}
-                        <td className="editable-cell" onClick={() => handleCellClick(entry, 'notes', entry.notes)}>
-                          {editingCell && editingCell.id === entry._id && editingCell.field === 'notes' ? (
-                            <input
-                              type="text"
-                              className="cell-edit-input"
-                              placeholder="Add notes..."
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onBlur={() => handleSaveCell(entry._id, 'notes')}
-                              onKeyDown={(e) => handleKeyDown(e, entry._id, 'notes')}
-                              autoFocus
-                            />
-                          ) : (
-                            entry.notes || <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic', opacity: 0.5 }}>Click to add...</span>
                           )}
                         </td>
 
@@ -564,6 +540,31 @@ function App() {
               </span>
             </div>
           </section>
+
+          {/* Yearly summary stats cards for the entire selected year */}
+          <div style={{ borderTop: '1px dashed var(--glass-border)', paddingTop: '1rem' }}>
+            <h2 className="panel-title" style={{ fontSize: '1.25rem', marginBottom: '1.25rem' }}>This Year ({selectedYear})</h2>
+            <section className="stats-grid">
+              <div className="stat-card">
+                <span className="stat-label">Yearly Income</span>
+                <span className="stat-value credit">
+                  {formatCurrency(yearlyCredited)}
+                </span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-label">Yearly Expenses</span>
+                <span className="stat-value debit">
+                  {formatCurrency(yearlyDebited)}
+                </span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-label">Net Yearly Balance</span>
+                <span className={`stat-value ${yearlyBalance >= 0 ? 'balance-positive' : 'balance-negative'}`}>
+                  {formatCurrency(yearlyBalance)}
+                </span>
+              </div>
+            </section>
+          </div>
 
           {/* Yearly summary table */}
           <section className="table-panel">

@@ -38,7 +38,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { date, details, debited, credited, notes } = req.body;
+    const { date, details, debited, credited } = req.body;
     if (!date || !details) {
       return res.status(400).json({ error: 'Date and details are required.' });
     }
@@ -58,8 +58,7 @@ router.post('/', async (req, res) => {
       details,
       debited: numDebited,
       credited: numCredited,
-      balance,
-      notes: notes || ''
+      balance
     });
 
     await newEntry.save();
@@ -84,7 +83,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { date, details, debited, credited, notes } = req.body;
+    const { date, details, debited, credited } = req.body;
 
     const entry = await Entry.findById(id);
     if (!entry) {
@@ -95,7 +94,6 @@ router.put('/:id', async (req, res) => {
     if (details !== undefined) entry.details = details;
     if (debited !== undefined) entry.debited = Number(debited || 0);
     if (credited !== undefined) entry.credited = Number(credited || 0);
-    if (notes !== undefined) entry.notes = notes;
 
     await entry.save();
 
