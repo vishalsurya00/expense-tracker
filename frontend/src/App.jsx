@@ -163,10 +163,11 @@ function App() {
   const totalDebited = entries.reduce((acc, curr) => acc + (curr.debited || 0), 0);
 
   const formatCurrency = (val) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
+    const formattedNum = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(val || 0);
+    return `₹${formattedNum}`;
   };
 
   const formatDateDisplay = (dateString) => {
