@@ -128,6 +128,10 @@ function CustomDatePicker({ value, onChange, onBlur, id, className, autoFocus })
   const handleDayChange = (e) => {
     const val = e.target.value.replace(/\D/g, ''); // Digits only
     if (val.length <= 2) {
+      const num = parseInt(val, 10);
+      if (!isNaN(num) && num > 31) {
+        return;
+      }
       setDay(val);
       updateParent(val, month, year);
       if (val.length === 2) {
@@ -139,6 +143,10 @@ function CustomDatePicker({ value, onChange, onBlur, id, className, autoFocus })
   const handleMonthChange = (e) => {
     const val = e.target.value.replace(/\D/g, '');
     if (val.length <= 2) {
+      const num = parseInt(val, 10);
+      if (!isNaN(num) && num > 12) {
+        return;
+      }
       setMonth(val);
       updateParent(day, val, year);
       if (val.length === 2) {
