@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -18,6 +19,17 @@ const CATEGORIES = [
   'Other'
 ];
 
+const COLORS = {
+  Food: '#6366F1',      // Indigo
+  Travel: '#3B82F6',    // Blue
+  Bills: '#A855F7',     // Purple
+  Shopping: '#EC4899',  // Pink
+  Education: '#14B8A6', // Teal
+  Health: '#F43F5E',    // Rose
+  Salary: '#10B981',    // Emerald
+  Other: '#64748B'      // Slate
+};
+
 function App() {
   const [entries, setEntries] = useState([]);
   const [formData, setFormData] = useState({
@@ -30,6 +42,8 @@ function App() {
   const [activeTab, setActiveTab] = useState('ledger');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [insightMonth, setInsightMonth] = useState(new Date().getMonth());
+  const [insightYear, setInsightYear] = useState(new Date().getFullYear());
   const [editingCell, setEditingCell] = useState(null); // { id, field }
   const [editValue, setEditValue] = useState('');
   const [loading, setLoading] = useState(false);
@@ -322,6 +336,35 @@ function App() {
 
   const sortedYears = Object.keys(groupedEntries).map(Number).sort((a, b) => b - a);
 
+  // --- Category Insights Calculations (Monthly) ---
+  const insightEntries = entries.filter((entry) => {
+    const d = new Date(entry.date);
+    return d.getUTCFullYear() === Number(insightYear) && d.getUTCMonth() === Number(insightMonth);
+  });
+
+  const categorySpendsMap = {};
+  insightEntries.forEach((entry) => {
+    if (entry.debited > 0) {
+      const cat = entry.category || 'Other';
+      categorySpendsMap[cat] = (categorySpendsMap[cat] || 0) + entry.debited;
+    }
+  });
+
+  const totalInsightDebited = Object.values(categorySpendsMap).reduce((sum, val) => sum + val, 0);
+
+  // Only include categories with non-zero debited totals and sort highest to lowest spend
+  const chartData = Object.keys(categorySpendsMap)
+    .map((cat) => {
+      const amount = categorySpendsMap[cat];
+      const percentage = totalInsightDebited > 0 ? ((amount / totalInsightDebited) * 100).toFixed(1) : '0';
+      return {
+        name: cat,
+        value: amount,
+        percentage
+      };
+    })
+    .sort((a, b) => b.value - a.value);
+
   // Table Render Helper
   const renderTable = (entriesList) => (
     <table className="ledger-table">
@@ -471,6 +514,12 @@ function App() {
           onClick={() => setActiveTab('summary')}
         >
           Summary Dashboard
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'insights' ? 'active' : ''}`}
+          onClick={() => setActiveTab('insights')}
+        >
+          Category Insights
         </button>
       </div>
 
@@ -735,7 +784,7 @@ function App() {
             </div>
           )}
         </>
-      ) : (
+      ) : activeTab === 'summary' ? (
         /* Summary Tab view */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           {/* Controls selector Bar */}
@@ -850,6 +899,145 @@ function App() {
               </table>
             </div>
           </section>
+        </div>
+      ) : (
+        /* Category Insights Tab view */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* Controls Selector Bar */}
+          <section className="form-panel" style={{ padding: '1.25rem 2rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'center' }}>
+              <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                <label className="form-label" htmlFor="insight-month">Select Month</label>
+                <select
+                  id="insight-month"
+                  className="form-input"
+                  style={{ appearance: 'auto', paddingRight: '2rem' }}
+                  value={insightMonth}
+                  onChange={(e) => setInsightMonth(Number(e.target.value))}
+                >
+                  {MONTHS.map((m, idx) => (
+                    <option key={idx} value={idx}>{m}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                <label className="form-label" htmlFor="insight-year">Select Year</label>
+                <select
+                  id="insight-year"
+                  className="form-input"
+                  style={{ appearance: 'auto', paddingRight: '2rem' }}
+                  value={insightYear}
+                  onChange={(e) => setInsightYear(Number(e.target.value))}
+                >
+                  {uniqueYears.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* Chart Display Panel */}
+          {chartData.length === 0 ? (
+            <section className="table-panel" style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              <div style={{ fontSize: '3.5rem', marginBottom: '1.5rem', opacity: 0.5 }}>📊</div>
+              <p>No expenses found for {MONTHS[insightMonth]} {insightYear}. Add some expenses to view the category breakdown.</p>
+            </section>
+          ) : (
+            <>
+              {/* Split Layout: Donut Chart + Custom Legend */}
+              <section className="form-panel" style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'center', justifyContent: 'center', padding: '2.5rem' }}>
+                {/* Donut Chart */}
+                <div style={{ width: '280px', height: '280px', position: 'relative' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={70}
+                        outerRadius={95}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[entry.name] || COLORS.Other} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value) => formatCurrency(value)}
+                        contentStyle={{
+                          background: 'rgba(15, 23, 42, 0.9)',
+                          border: '1px solid var(--glass-border)',
+                          borderRadius: '8px',
+                          color: '#f8fafc',
+                          fontFamily: 'var(--font-family)'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* Center metrics overlay */}
+                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>Total Spend</div>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.15rem' }}>{formatCurrency(totalInsightDebited)}</div>
+                  </div>
+                </div>
+
+                {/* Custom Legend details */}
+                <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.6rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.6rem' }}>
+                    Expenses Breakdown
+                  </h3>
+                  {chartData.map((entry, index) => {
+                    const color = COLORS[entry.name] || COLORS.Other;
+                    return (
+                      <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.95rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: color, boxShadow: `0 0 8px ${color}44` }}></div>
+                          <span style={{ fontWeight: 500 }}>{entry.name}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                          <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatCurrency(entry.value)}</span>
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', width: '45px', textAlign: 'right' }}>{entry.percentage}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* Sorted Category Table */}
+              <section className="table-panel">
+                <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--glass-border)' }}>
+                  <h2 className="panel-title" style={{ margin: 0, fontSize: '1.20rem' }}>Category Spend Ranking</h2>
+                </div>
+                <div className="table-responsive">
+                  <table className="ledger-table">
+                    <thead>
+                      <tr>
+                        <th>Category</th>
+                        <th>Total Debited (Expenses)</th>
+                        <th>Share (%)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {chartData.map((data, idx) => (
+                        <tr key={idx}>
+                          <td style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 600 }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: COLORS[data.name] || COLORS.Other, boxShadow: `0 0 6px ${COLORS[data.name] || COLORS.Other}44` }}></div>
+                            {data.name}
+                          </td>
+                          <td className="text-debit" style={{ fontWeight: 600 }}>{formatCurrency(data.value)}</td>
+                          <td style={{ color: 'var(--text-secondary)' }}>{data.percentage}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
+          )}
         </div>
       )}
     </div>
