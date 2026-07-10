@@ -39,33 +39,44 @@ function CustomDatePicker({ value, onChange, onBlur, id, className, autoFocus })
   const dayRef = useRef(null);
   const monthRef = useRef(null);
   const yearRef = useRef(null);
+  const lastSentValue = useRef('');
 
   // Sync internal state with external YYYY-MM-DD value
   useEffect(() => {
+    if (value === lastSentValue.current) {
+      return;
+    }
     if (value) {
       const parts = value.split('-');
       if (parts.length === 3) {
-        setYear(parts[0] || '');
-        setMonth(parts[1] || '');
-        setDay(parts[2] || '');
+        const y = parts[0] === '0000' ? '' : parts[0];
+        const m = parts[1] === '00' ? '' : parts[1];
+        const d = parts[2] === '00' ? '' : parts[2];
+        
+        setYear(y || '');
+        setMonth(m || '');
+        setDay(d || '');
+        lastSentValue.current = value;
         return;
       }
     }
     setYear('');
     setMonth('');
     setDay('');
+    lastSentValue.current = '';
   }, [value]);
 
   // Combine fields and call parent onChange
   const updateParent = (d, m, y) => {
-    if (!d && !m && !y) {
-      onChange('');
-      return;
+    let combined = '';
+    if (d || m || y) {
+      const formattedY = y.padEnd(4, '0').slice(0, 4);
+      const formattedM = m.padStart(2, '0').slice(0, 2);
+      const formattedD = d.padStart(2, '0').slice(0, 2);
+      combined = `${formattedY}-${formattedM}-${formattedD}`;
     }
-    const formattedY = y.padEnd(4, '0').slice(0, 4);
-    const formattedM = m.padStart(2, '0').slice(0, 2);
-    const formattedD = d.padStart(2, '0').slice(0, 2);
-    onChange(`${formattedY}-${formattedM}-${formattedD}`);
+    lastSentValue.current = combined;
+    onChange(combined);
   };
 
   const validateAndFormat = (d, m, y) => {
@@ -104,9 +115,12 @@ function CustomDatePicker({ value, onChange, onBlur, id, className, autoFocus })
       setMonth(cleanMonth);
       setYear(cleanYear);
 
-      const combined = (cleanDay || cleanMonth || cleanYear) ? 
-        `${cleanYear.padEnd(4, '0')}-${cleanMonth.padStart(2, '0')}-${cleanDay.padStart(2, '0')}` : '';
+      let combined = '';
+      if (cleanDay || cleanMonth || cleanYear) {
+        combined = `${cleanYear.padEnd(4, '0')}-${cleanMonth.padStart(2, '0')}-${cleanDay.padStart(2, '0')}`;
+      }
       
+      lastSentValue.current = combined;
       onBlur?.(combined);
     }
   };
@@ -154,9 +168,12 @@ function CustomDatePicker({ value, onChange, onBlur, id, className, autoFocus })
       setMonth(cleanMonth);
       setYear(cleanYear);
       
-      const combined = (cleanDay || cleanMonth || cleanYear) ? 
-        `${cleanYear.padEnd(4, '0')}-${cleanMonth.padStart(2, '0')}-${cleanDay.padStart(2, '0')}` : '';
+      let combined = '';
+      if (cleanDay || cleanMonth || cleanYear) {
+        combined = `${cleanYear.padEnd(4, '0')}-${cleanMonth.padStart(2, '0')}-${cleanDay.padStart(2, '0')}`;
+      }
       
+      lastSentValue.current = combined;
       onChange(combined);
       onBlur?.(combined);
     } else if (e.key === 'Escape') {
@@ -265,24 +282,11 @@ function App() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleDateOnInput = (e, callback) => {
-    let val = e.target.value;
-    if (val) {
-      const parts = val.split('-');
-      if (parts[0] && parts[0].length > 4) {
-        parts[0] = parts[0].slice(0, 4);
-        val = parts.join('-');
-        e.target.value = val;
-      }
-    }
-    callback(val);
-  };
-
   // Add new entry
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.date || !formData.details) {
-      alert('Date and details are required.');
+    if (!formData.date || formData.date.startsWith('0000') || formData.date.includes('-00') || !formData.details) {
+      alert('Please enter a valid complete date (DD / MM / YYYY) and details.');
       return;
     }
 
@@ -332,8 +336,8 @@ function App() {
       setEditingCell(null);
       return;
     }
-    if (field === 'date' && !value) {
-      alert('Date cannot be empty.');
+    if (field === 'date' && (!value || value.startsWith('0000') || value.includes('-00'))) {
+      alert('Please enter a valid complete date (DD / MM / YYYY).');
       setEditingCell(null);
       return;
     }
@@ -496,11 +500,14 @@ function App() {
     }
 
     // Date range filter
-    if (startDate) {
+    const isStartDateValid = startDate && !startDate.startsWith('0000') && !startDate.includes('-00');
+    const isEndDateValid = endDate && !endDate.startsWith('0000') && !endDate.includes('-00');
+
+    if (isStartDateValid) {
       const dStr = new Date(entry.date).toISOString().split('T')[0];
       if (dStr < startDate) return false;
     }
-    if (endDate) {
+    if (isEndDateValid) {
       const dStr = new Date(entry.date).toISOString().split('T')[0];
       if (dStr > endDate) return false;
     }
@@ -513,7 +520,9 @@ function App() {
     return true;
   });
 
-  const isFilterActive = !!searchQuery.trim() || !!startDate || !!endDate || filterCategory !== 'All';
+  const isStartDateActive = startDate && !startDate.startsWith('0000') && !startDate.includes('-00');
+  const isEndDateActive = endDate && !endDate.startsWith('0000') && !endDate.includes('-00');
+  const isFilterActive = !!searchQuery.trim() || !!isStartDateActive || !!isEndDateActive || filterCategory !== 'All';
 
   // --- Grouping Logic for Collapsible View ---
   const groupedEntries = {}; // y -> m -> entries list
