@@ -19,6 +19,10 @@ const EntrySchema = new mongoose.Schema({
   },
   balance: {
     type: Number
+  },
+  notes: {
+    type: String,
+    default: ''
   }
 }, {
   timestamps: { createdAt: 'createdAt', updatedAt: false }
