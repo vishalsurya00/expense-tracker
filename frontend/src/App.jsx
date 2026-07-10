@@ -86,6 +86,19 @@ function App() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleDateOnInput = (e, callback) => {
+    let val = e.target.value;
+    if (val) {
+      const parts = val.split('-');
+      if (parts[0] && parts[0].length > 4) {
+        parts[0] = parts[0].slice(0, 4);
+        val = parts.join('-');
+        e.target.value = val;
+      }
+    }
+    callback(val);
+  };
+
   // Add new entry
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -387,9 +400,12 @@ function App() {
               {editingCell && editingCell.id === entry._id && editingCell.field === 'date' ? (
                 <input
                   type="date"
+                  min="1900-01-01"
+                  max="2100-12-31"
                   className="cell-edit-input"
                   value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
+                  onInput={(e) => handleDateOnInput(e, setEditValue)}
+                  onChange={(e) => handleDateOnInput(e, setEditValue)}
                   onBlur={() => handleSaveCell(entry._id, 'date', editValue)}
                   onKeyDown={(e) => handleKeyDown(e, entry._id, 'date')}
                   autoFocus
@@ -563,9 +579,12 @@ function App() {
                   type="date"
                   id="date"
                   name="date"
+                  min="1900-01-01"
+                  max="2100-12-31"
                   className="form-input"
                   value={formData.date}
-                  onChange={handleInputChange}
+                  onInput={(e) => handleDateOnInput(e, (val) => setFormData((prev) => ({ ...prev, date: val })))}
+                  onChange={(e) => handleDateOnInput(e, (val) => setFormData((prev) => ({ ...prev, date: val })))}
                   required
                 />
               </div>
@@ -647,18 +666,24 @@ function App() {
                 <label className="form-label">From Date</label>
                 <input
                   type="date"
+                  min="1900-01-01"
+                  max="2100-12-31"
                   className="form-input"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onInput={(e) => handleDateOnInput(e, setStartDate)}
+                  onChange={(e) => handleDateOnInput(e, setStartDate)}
                 />
               </div>
               <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
                 <label className="form-label">To Date</label>
                 <input
                   type="date"
+                  min="1900-01-01"
+                  max="2100-12-31"
                   className="form-input"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onInput={(e) => handleDateOnInput(e, setEndDate)}
+                  onChange={(e) => handleDateOnInput(e, setEndDate)}
                 />
               </div>
               <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
