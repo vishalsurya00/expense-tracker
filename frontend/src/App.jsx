@@ -321,11 +321,28 @@ function App() {
   const [expandedYears, setExpandedYears] = useState({ [new Date().getFullYear()]: true });
   const [expandedMonths, setExpandedMonths] = useState({});
 
+  // Get authentication headers with Bearer token
+  const getAuthHeaders = async () => {
+    if (auth.currentUser) {
+      const token = await auth.currentUser.getIdToken();
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+    }
+    return {
+      'Content-Type': 'application/json'
+    };
+  };
+
   // Fetch entries from backend
   const fetchEntries = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/api/entries`);
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/api/entries`, {
+        headers
+      });
       if (!res.ok) throw new Error('Failed to fetch entries from the server.');
       const data = await res.json();
       setEntries(data);
@@ -359,9 +376,10 @@ function App() {
     }
 
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/api/entries`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           date: formData.date,
           details: formData.details,
@@ -419,9 +437,10 @@ function App() {
     };
 
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/api/entries/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(updatedBody)
       });
 
@@ -450,8 +469,10 @@ function App() {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this entry?')) return;
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/api/entries/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers
       });
 
       if (!res.ok) {

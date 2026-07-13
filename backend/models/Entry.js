@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const EntrySchema = new mongoose.Schema({
+  userId: {
+    type: String,
+    required: true
+  },
   date: {
     type: Date,
     required: true
