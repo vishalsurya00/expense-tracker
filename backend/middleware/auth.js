@@ -1,12 +1,13 @@
-const admin = require('firebase-admin');
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
 
 const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT;
 
 if (serviceAccountString) {
   try {
     const serviceAccount = JSON.parse(serviceAccountString);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
+    initializeApp({
+      credential: cert(serviceAccount)
     });
     console.log('Firebase Admin initialized successfully.');
   } catch (error) {
@@ -28,7 +29,7 @@ const verifyAuthToken = async (req, res, next) => {
 
   const token = authHeader.split('Bearer ')[1];
   try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
+    const decodedToken = await getAuth().verifyIdToken(token);
     req.userId = decodedToken.uid;
     next();
   } catch (error) {
