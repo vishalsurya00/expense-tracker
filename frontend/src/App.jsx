@@ -14,6 +14,9 @@ import {
   WidthType,
   BorderStyle
 } from 'docx';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from './firebase';
+import AuthPage from './components/AuthPage';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -275,6 +278,12 @@ function App() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef(null);
 
+  // Auth State
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const userDropdownRef = useRef(null);
+
   // Close export dropdown on click outside
   useEffect(() => {
     if (!showExportMenu) return;
@@ -286,6 +295,27 @@ function App() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showExportMenu]);
+
+  // Close user dropdown on click outside
+  useEffect(() => {
+    if (!showUserDropdown) return;
+    const handleClickOutside = (e) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target)) {
+        setShowUserDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showUserDropdown]);
+
+  // Listen to auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Collapsible Grouping State
   const [expandedYears, setExpandedYears] = useState({ [new Date().getFullYear()]: true });
@@ -309,8 +339,10 @@ function App() {
   };
 
   useEffect(() => {
-    fetchEntries();
-  }, []);
+    if (user) {
+      fetchEntries();
+    }
+  }, [user]);
 
   // Form input changes
   const handleInputChange = (e) => {
@@ -953,11 +985,52 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
+  if (authLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', color: 'var(--text-secondary)', fontFamily: 'var(--font-family)' }}>
+        Loading Zen-Ledger...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage />;
+  }
+
   return (
     <div className="app-container">
       <header className="app-header">
         <h1 className="app-title">Zen-Ledger</h1>
         <p className="app-subtitle">A premium personal finance ledger & expense tracker</p>
+
+        {/* User Info Display */}
+        <div className="header-user-container" ref={userDropdownRef}>
+          <div 
+            className="header-user-profile" 
+            onClick={() => setShowUserDropdown(!showUserDropdown)}
+          >
+            <span className="user-name">
+              {user.displayName || user.email}
+            </span>
+            <div className="user-avatar">
+              {(user.displayName || user.email || 'U')[0]}
+            </div>
+          </div>
+          {showUserDropdown && (
+            <div className="user-dropdown-menu">
+              <button 
+                type="button" 
+                className="user-dropdown-item" 
+                onClick={async () => {
+                  setShowUserDropdown(false);
+                  await signOut(auth);
+                }}
+              >
+                <span>🚪</span> Log Out
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       {/* Tab Switcher */}
