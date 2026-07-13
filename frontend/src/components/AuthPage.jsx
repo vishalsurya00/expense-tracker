@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  signInWithPopup 
+  signInWithPopup,
+  updateProfile
 } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 
-export default function AuthPage() {
+export default function AuthPage({ onAuthSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,10 +23,16 @@ export default function AuthPage() {
 
     try {
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        if (displayName.trim()) {
+          await updateProfile(userCredential.user, {
+            displayName: displayName.trim()
+          });
+        }
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
+      onAuthSuccess?.();
     } catch (err) {
       console.error(err);
       let message = err.message;
@@ -47,6 +56,7 @@ export default function AuthPage() {
     setLoading(true);
     try {
       await signInWithPopup(auth, googleProvider);
+      onAuthSuccess?.();
     } catch (err) {
       console.error(err);
       if (err.code !== 'auth/popup-closed-by-user') {
@@ -74,6 +84,22 @@ export default function AuthPage() {
         )}
 
         <form onSubmit={handleSubmit} className="auth-form">
+          {isSignUp && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="auth-name">Full Name</label>
+              <input
+                type="text"
+                id="auth-name"
+                className="form-input"
+                placeholder="John Doe"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required={isSignUp}
+                disabled={loading}
+              />
+            </div>
+          )}
+
           <div className="form-group">
             <label className="form-label" htmlFor="auth-email">Email Address</label>
             <input
@@ -90,16 +116,49 @@ export default function AuthPage() {
 
           <div className="form-group">
             <label className="form-label" htmlFor="auth-password">Password</label>
-            <input
-              type="password"
-              id="auth-password"
-              className="form-input"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-            />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                id="auth-password"
+                className="form-input"
+                style={{ paddingRight: '2.5rem', width: '100%' }}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '0.75rem',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0',
+                  zIndex: 5
+                }}
+                disabled={loading}
+              >
+                {showPassword ? (
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           <button type="submit" className="btn btn-primary auth-submit-btn" disabled={loading}>

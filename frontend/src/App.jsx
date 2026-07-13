@@ -985,6 +985,17 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
+  const handleAuthSuccess = async () => {
+    if (auth.currentUser) {
+      await auth.currentUser.reload();
+      setUser({
+        ...auth.currentUser,
+        displayName: auth.currentUser.displayName,
+        email: auth.currentUser.email
+      });
+    }
+  };
+
   if (authLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', color: 'var(--text-secondary)', fontFamily: 'var(--font-family)' }}>
@@ -994,7 +1005,7 @@ function App() {
   }
 
   if (!user) {
-    return <AuthPage />;
+    return <AuthPage onAuthSuccess={handleAuthSuccess} />;
   }
 
   return (
