@@ -317,6 +317,17 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  // Reset form data when user changes (login, logout, different user)
+  useEffect(() => {
+    setFormData({
+      date: '',
+      details: '',
+      category: 'Other',
+      debited: '',
+      credited: ''
+    });
+  }, [user?.uid]);
+
   // Collapsible Grouping State
   const [expandedYears, setExpandedYears] = useState({ [new Date().getFullYear()]: true });
   const [expandedMonths, setExpandedMonths] = useState({});
