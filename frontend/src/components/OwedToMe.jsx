@@ -75,7 +75,7 @@ function OwedToMe({
           <button
             type="submit"
             className="btn btn-primary"
-            style={{ gridRow: 2, gridColumn: 1, justifySelf: 'start' }}
+            style={{ gridRow: 2, gridColumn: 1 }}
           >
             Add Owed Entry
           </button>
