@@ -400,15 +400,11 @@ function App() {
       setOwedEntries(data);
       setOwedError('');
 
-      // Daily reminder popup check
-      if (auth.currentUser) {
-        const pending = data.filter((item) => item.status === 'Pending');
-        const todayStr = new Date().toISOString().split('T')[0];
-        const lastShownDate = localStorage.getItem(`lastOwedReminderShown_${auth.currentUser.uid}`);
-        if (pending.length > 0 && lastShownDate !== todayStr) {
-          setOwedReminderList(pending);
-          setShowOwedReminderModal(true);
-        }
+      // Reminder popup check on app load
+      const pending = data.filter((item) => item.status === 'Pending');
+      if (pending.length > 0) {
+        setOwedReminderList(pending);
+        setShowOwedReminderModal(true);
       }
     } catch (err) {
       console.error(err);
@@ -508,12 +504,8 @@ function App() {
     }
   };
 
-  // Close daily reminder modal
+  // Close reminder modal
   const handleCloseReminderModal = () => {
-    if (auth.currentUser) {
-      const todayStr = new Date().toISOString().split('T')[0];
-      localStorage.setItem(`lastOwedReminderShown_${auth.currentUser.uid}`, todayStr);
-    }
     setShowOwedReminderModal(false);
   };
 
