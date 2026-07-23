@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const healthRouter = require('./routes/health');
 const entriesRouter = require('./routes/entries');
+const owedRouter = require('./routes/owed');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -17,6 +18,7 @@ app.use(express.json());
 // Mount routes
 app.use('/api', healthRouter);
 app.use('/api/entries', entriesRouter);
+app.use('/api/owed', owedRouter);
 
 // Basic root route for verification
 app.get('/', (req, res) => {
