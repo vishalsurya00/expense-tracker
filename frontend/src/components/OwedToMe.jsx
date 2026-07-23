@@ -72,11 +72,7 @@ function OwedToMe({
               onChange={(e) => setOwedFormData((prev) => ({ ...prev, note: e.target.value }))}
             />
           </div>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={{ gridRow: 2, gridColumn: 1 }}
-          >
+          <button type="submit" className="btn btn-primary">
             Add Owed Entry
           </button>
         </form>

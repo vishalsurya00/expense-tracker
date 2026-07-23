@@ -157,6 +157,24 @@ body {
   align-items: flex-end;
 }
 
+.entry-form .btn-primary {
+  grid-column: 1 / -1;
+  justify-self: start;
+  align-self: flex-end;
+}
+
+@media (max-width: 640px) {
+  .entry-form {
+    grid-template-columns: 1fr;
+  }
+  
+  .entry-form .btn-primary {
+    grid-column: 1;
+    width: 100%;
+    justify-self: stretch;
+  }
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
