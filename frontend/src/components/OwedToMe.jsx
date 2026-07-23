@@ -24,6 +24,15 @@ function OwedToMe({
         <h2 className="panel-title">🤝 Record Money Owed to You</h2>
         <form onSubmit={handleOwedSubmit} className="entry-form">
           <div className="form-group">
+            <label className="form-label" htmlFor="owedDate">Date</label>
+            <CustomDatePicker
+              id="owedDate"
+              className="form-input-date-container"
+              value={owedFormData.date}
+              onChange={(val) => setOwedFormData((prev) => ({ ...prev, date: val }))}
+            />
+          </div>
+          <div className="form-group">
             <label className="form-label" htmlFor="friendName">Friend's Name</label>
             <input
               type="text"
@@ -52,15 +61,6 @@ function OwedToMe({
             />
           </div>
           <div className="form-group">
-            <label className="form-label" htmlFor="owedDate">Date</label>
-            <CustomDatePicker
-              id="owedDate"
-              className="form-input-date-container"
-              value={owedFormData.date}
-              onChange={(val) => setOwedFormData((prev) => ({ ...prev, date: val }))}
-            />
-          </div>
-          <div className="form-group">
             <label className="form-label" htmlFor="owedNote">Note (Optional)</label>
             <input
               type="text"
@@ -72,11 +72,13 @@ function OwedToMe({
               onChange={(e) => setOwedFormData((prev) => ({ ...prev, note: e.target.value }))}
             />
           </div>
-          <div className="form-group form-group-btn">
-            <button type="submit" className="btn-primary">
-              Add Owed Entry
-            </button>
-          </div>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ gridRow: 2, gridColumn: 1, justifySelf: 'start' }}
+          >
+            Add Owed Entry
+          </button>
         </form>
       </section>
 
