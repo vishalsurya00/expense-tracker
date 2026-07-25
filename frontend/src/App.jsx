@@ -18,6 +18,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import AuthPage from './components/AuthPage';
 import OwedToMe from './components/OwedToMe';
+import FixedDeposits from './components/FixedDeposits';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -298,6 +299,20 @@ function App() {
   const [showOwedReminderModal, setShowOwedReminderModal] = useState(false);
   const [owedReminderList, setOwedReminderList] = useState([]);
 
+  // Fixed Deposit State
+  const [fdEntries, setFdEntries] = useState([]);
+  const [fdFormData, setFdFormData] = useState({
+    details: '',
+    depositedAmount: '',
+    depositedDate: '',
+    closingDate: '',
+    interestRate: '',
+    totalAmount: '',
+    isTotalAmountManuallyEdited: false
+  });
+  const [fdLoading, setFdLoading] = useState(false);
+  const [fdError, setFdError] = useState('');
+
   // Close export dropdown on click outside
   useEffect(() => {
     if (!showExportMenu) return;
@@ -345,6 +360,15 @@ function App() {
       amount: '',
       date: '',
       note: ''
+    });
+    setFdFormData({
+      details: '',
+      depositedAmount: '',
+      depositedDate: '',
+      closingDate: '',
+      interestRate: '',
+      totalAmount: '',
+      isTotalAmountManuallyEdited: false
     });
   }, [user?.uid]);
 
@@ -414,12 +438,142 @@ function App() {
     }
   };
 
+  // Fetch fixed deposits from backend
+  const fetchFDEntries = async () => {
+    try {
+      setFdLoading(true);
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/api/fixed-deposits`, {
+        headers
+      });
+      if (!res.ok) throw new Error('Failed to fetch fixed deposits from the server.');
+      const data = await res.json();
+      setFdEntries(data);
+      setFdError('');
+    } catch (err) {
+      console.error(err);
+      setFdError('Could not fetch fixed deposits from the backend server.');
+    } finally {
+      setFdLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchEntries();
       fetchOwedEntries();
+      fetchFDEntries();
     }
   }, [user]);
+
+  // Submit handler for adding fixed deposit
+  const handleFDSubmit = async (e) => {
+    e.preventDefault();
+    if (!fdFormData.details.trim()) {
+      alert('Please enter bank details / label for the FD.');
+      return;
+    }
+    if (!fdFormData.depositedAmount || Number(fdFormData.depositedAmount) <= 0) {
+      alert('Please enter a valid positive deposited amount.');
+      return;
+    }
+    if (!fdFormData.depositedDate || fdFormData.depositedDate.startsWith('0000') || fdFormData.depositedDate.includes('-00')) {
+      alert('Please enter a valid complete deposited date (DD / MM / YYYY).');
+      return;
+    }
+    if (!fdFormData.closingDate || fdFormData.closingDate.startsWith('0000') || fdFormData.closingDate.includes('-00')) {
+      alert('Please enter a valid complete closing date (DD / MM / YYYY).');
+      return;
+    }
+    if (fdFormData.depositedDate >= fdFormData.closingDate) {
+      alert('Closing date must be after the deposited date.');
+      return;
+    }
+    if (fdFormData.interestRate === '' || Number(fdFormData.interestRate) < 0) {
+      alert('Please enter a valid interest rate (0 or higher).');
+      return;
+    }
+    if (!fdFormData.totalAmount || Number(fdFormData.totalAmount) <= 0) {
+      alert('Please enter a valid total maturity amount.');
+      return;
+    }
+
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/api/fixed-deposits`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          details: fdFormData.details,
+          depositedAmount: Number(fdFormData.depositedAmount),
+          depositedDate: fdFormData.depositedDate,
+          closingDate: fdFormData.closingDate,
+          interestRate: Number(fdFormData.interestRate),
+          totalAmount: Number(fdFormData.totalAmount)
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to create fixed deposit entry.');
+      }
+
+      setFdFormData({
+        details: '',
+        depositedAmount: '',
+        depositedDate: '',
+        closingDate: '',
+        interestRate: '',
+        totalAmount: '',
+        isTotalAmountManuallyEdited: false
+      });
+      fetchFDEntries();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // Mark fixed deposit as credited
+  const handleMarkCredited = async (id) => {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/api/fixed-deposits/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ status: 'Credited' })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to mark fixed deposit as credited.');
+      }
+
+      fetchFDEntries();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // Delete fixed deposit
+  const handleFDDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this fixed deposit entry?')) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/api/fixed-deposits/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to delete fixed deposit entry.');
+      }
+
+      fetchFDEntries();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   // Submit handler for adding owed entry
   const handleOwedSubmit = async (e) => {
@@ -1239,6 +1393,12 @@ function App() {
         >
           Owed to Me
         </button>
+        <button
+          className={`tab-btn ${activeTab === 'fixed-deposits' ? 'active' : ''}`}
+          onClick={() => setActiveTab('fixed-deposits')}
+        >
+          Fixed Deposits
+        </button>
       </div>
 
       {activeTab === 'ledger' && (
@@ -1758,6 +1918,21 @@ function App() {
           handleOwedSubmit={handleOwedSubmit}
           handleMarkSettled={handleMarkSettled}
           handleOwedDelete={handleOwedDelete}
+          CustomDatePicker={CustomDatePicker}
+          formatDateDisplay={formatDateDisplay}
+          formatCurrency={formatCurrency}
+        />
+      )}
+
+      {/* Fixed Deposits Tab */}
+      {activeTab === 'fixed-deposits' && (
+        <FixedDeposits
+          fdEntries={fdEntries}
+          fdFormData={fdFormData}
+          setFdFormData={setFdFormData}
+          handleFDSubmit={handleFDSubmit}
+          handleMarkCredited={handleMarkCredited}
+          handleFDDelete={handleFDDelete}
           CustomDatePicker={CustomDatePicker}
           formatDateDisplay={formatDateDisplay}
           formatCurrency={formatCurrency}

@@ -964,6 +964,59 @@ body {
   background: linear-gradient(135deg, #059669, #047857);
 }
 
+/* Fixed Deposit Specific Styles */
+.status-active {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
+.status-credited {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.fd-row-active {
+  background: rgba(99, 102, 241, 0.03);
+  transition: var(--transition);
+}
+
+.fd-row-active:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.fd-row-credited {
+  opacity: 0.6;
+  background: rgba(255, 255, 255, 0.01);
+  transition: var(--transition);
+}
+
+.fd-row-credited:hover {
+  opacity: 0.85;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.btn-credit {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  border: none;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  font-family: var(--font-family);
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+.btn-credit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+}
+
 /* Daily Reminder Modal Overlay */
 .modal-overlay {
   position: fixed;
