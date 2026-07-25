@@ -32,7 +32,7 @@ export function calculateDuration(startDateStr, endDateStr) {
   return parts.join(', ');
 }
 
-// Helper to calculate simple interest estimate
+// Helper to calculate quarterly compound interest estimate
 export function calculateSuggestedTotal(amount, rate, startDateStr, endDateStr) {
   const numAmount = Number(amount);
   const numRate = Number(rate);
@@ -47,9 +47,10 @@ export function calculateSuggestedTotal(amount, rate, startDateStr, endDateStr) 
   }
 
   const diffInDays = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
-  const years = diffInDays / 365.25;
-  const interest = (numAmount * numRate * years) / 100;
-  return (numAmount + interest).toFixed(2);
+  const years = diffInDays / 365;
+  const quarterlyRate = numRate / 4 / 100;
+  const maturityValue = numAmount * Math.pow(1 + quarterlyRate, 4 * years);
+  return maturityValue.toFixed(2);
 }
 
 function FixedDeposits({
@@ -221,7 +222,7 @@ function FixedDeposits({
 
             {suggestedTotal !== null && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span>Suggested Simple Interest Maturity: </span>
+                <span>Suggested Maturity Value (Quarterly Compounding): </span>
                 <strong style={{ color: 'var(--success)', fontSize: '0.95rem' }}>
                   {formatCurrency(suggestedTotal)}
                 </strong>
