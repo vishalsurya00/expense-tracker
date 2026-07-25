@@ -263,6 +263,7 @@ function App() {
     credited: ''
   });
   const [activeTab, setActiveTab] = useState('ledger');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [insightMonth, setInsightMonth] = useState(new Date().getMonth());
@@ -1334,6 +1335,16 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header">
+        {/* Mobile Hamburger Button */}
+        <button
+          type="button"
+          className="mobile-menu-btn"
+          onClick={() => setMobileMenuOpen(true)}
+          aria-label="Open navigation menu"
+        >
+          ☰
+        </button>
+
         <h1 className="app-title">Zen-Ledger</h1>
         <p className="app-subtitle">A premium personal finance ledger & expense tracker</p>
 
@@ -1366,6 +1377,73 @@ function App() {
           )}
         </div>
       </header>
+
+      {/* Mobile Navigation Drawer */}
+      {mobileMenuOpen && (
+        <div className="mobile-drawer-overlay" onClick={() => setMobileMenuOpen(false)}>
+          <div className="mobile-drawer-content" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-drawer-header">
+              <span className="mobile-drawer-title">Navigation Menu</span>
+              <button
+                type="button"
+                className="mobile-drawer-close-btn"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close menu"
+              >
+                ✕
+              </button>
+            </div>
+
+            <nav className="mobile-drawer-nav">
+              <button
+                className={`mobile-drawer-tab ${activeTab === 'ledger' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('ledger');
+                  setMobileMenuOpen(false);
+                }}
+              >
+                <span className="tab-icon">📒</span> Ledger View
+              </button>
+              <button
+                className={`mobile-drawer-tab ${activeTab === 'summary' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('summary');
+                  setMobileMenuOpen(false);
+                }}
+              >
+                <span className="tab-icon">📊</span> Summary Dashboard
+              </button>
+              <button
+                className={`mobile-drawer-tab ${activeTab === 'insights' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('insights');
+                  setMobileMenuOpen(false);
+                }}
+              >
+                <span className="tab-icon">💡</span> Category Insights
+              </button>
+              <button
+                className={`mobile-drawer-tab ${activeTab === 'owed' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('owed');
+                  setMobileMenuOpen(false);
+                }}
+              >
+                <span className="tab-icon">🤝</span> Owed to Me
+              </button>
+              <button
+                className={`mobile-drawer-tab ${activeTab === 'fixed-deposits' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('fixed-deposits');
+                  setMobileMenuOpen(false);
+                }}
+              >
+                <span className="tab-icon">🏦</span> Fixed Deposits
+              </button>
+            </nav>
+          </div>
+        </div>
+      )}
 
       {/* Tab Switcher */}
       <div className="tab-container">
