@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { CATEGORIES } = require('../constants/categories');
 
 const EntrySchema = new mongoose.Schema({
   userId: {
@@ -26,7 +27,7 @@ const EntrySchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['Food', 'Travel', 'Bills', 'Shopping', 'Education', 'Health', 'Salary', 'Other'],
+    enum: CATEGORIES,
     default: 'Other'
   }
 }, {

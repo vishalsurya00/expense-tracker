@@ -19,6 +19,7 @@ import { auth } from './firebase';
 import AuthPage from './components/AuthPage';
 import OwedToMe from './components/OwedToMe';
 import FixedDeposits from './components/FixedDeposits';
+import { CATEGORIES, COLORS } from './constants/categories';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -26,28 +27,6 @@ const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
-
-const CATEGORIES = [
-  'Food',
-  'Travel',
-  'Bills',
-  'Shopping',
-  'Education',
-  'Health',
-  'Salary',
-  'Other'
-];
-
-const COLORS = {
-  Food: '#6366F1',      // Indigo
-  Travel: '#3B82F6',    // Blue
-  Bills: '#A855F7',     // Purple
-  Shopping: '#EC4899',  // Pink
-  Education: '#14B8A6', // Teal
-  Health: '#F43F5E',    // Rose
-  Salary: '#10B981',    // Emerald
-  Other: '#64748B'      // Slate
-};
 
 // Custom Date Picker component (DD / MM / YYYY)
 function CustomDatePicker({ value, onChange, onBlur, id, className, autoFocus }) {
