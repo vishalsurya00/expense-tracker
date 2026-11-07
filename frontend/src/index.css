@@ -543,7 +543,9 @@ body {
   background: rgba(30, 41, 59, 0.4);
   border: 1px solid var(--glass-border);
   border-radius: 8px;
-  padding: 0.35rem 0.6rem;
+  padding: 0 0.25rem 0 0.6rem;
+  height: 42px;
+  box-sizing: border-box;
   gap: 0.25rem;
   transition: var(--transition);
   max-width: 100%;
@@ -1271,5 +1273,101 @@ body {
 
 .modal-close-btn {
   min-width: 120px;
+}
+
+/* ==========================================================================
+   Calendar Icon & Today Button inside CustomDatePicker
+   ========================================================================== */
+
+/* Actions container (icon + today btn) pushed to the right end */
+.date-picker-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Calendar icon button — 40×40 tap target, vertically centered */
+.date-picker-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #a5b4fc;
+  cursor: pointer;
+  transition: var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.date-picker-icon-btn:hover {
+  background: rgba(99, 102, 241, 0.15);
+  color: #c7d2fe;
+}
+
+.date-picker-icon-btn:active {
+  background: rgba(99, 102, 241, 0.25);
+}
+
+/* "Today" text button — only shown on Add New Transaction */
+.date-today-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 0.55rem;
+  margin: 0;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 6px;
+  color: #a5b4fc;
+  font-family: var(--font-family);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.date-today-btn:hover {
+  background: rgba(99, 102, 241, 0.22);
+  border-color: rgba(99, 102, 241, 0.45);
+  color: #e0e7ff;
+}
+
+.date-today-btn:active {
+  background: rgba(99, 102, 241, 0.35);
+}
+
+/* Hidden native date input — sits behind the calendar icon, invisible */
+.date-hidden-native {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+/* Make the date picker container position-relative for the hidden input */
+.custom-date-picker {
+  position: relative;
 }
 

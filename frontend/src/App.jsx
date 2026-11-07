@@ -29,7 +29,7 @@ const MONTHS = [
 ];
 
 // Custom Date Picker component (DD / MM / YYYY)
-function CustomDatePicker({ value, onChange, onBlur, id, className, autoFocus }) {
+function CustomDatePicker({ value, onChange, onBlur, id, className, autoFocus, showTodayButton }) {
   const [day, setDay] = useState('');
   const [month, setMonth] = useState('');
   const [year, setYear] = useState('');
@@ -37,6 +37,7 @@ function CustomDatePicker({ value, onChange, onBlur, id, className, autoFocus })
   const dayRef = useRef(null);
   const monthRef = useRef(null);
   const yearRef = useRef(null);
+  const hiddenDateRef = useRef(null);
   const lastSentValue = useRef('');
 
   // Sync internal state with external YYYY-MM-DD value
@@ -193,6 +194,57 @@ function CustomDatePicker({ value, onChange, onBlur, id, className, autoFocus })
     }
   };
 
+  // Open the native date picker via the hidden input
+  const openNativePicker = () => {
+    const input = hiddenDateRef.current;
+    if (!input) return;
+    // Pre-fill the hidden input with current value if valid
+    if (day && month && year && year.length === 4) {
+      const m = month.padStart(2, '0');
+      const d = day.padStart(2, '0');
+      input.value = `${year}-${m}-${d}`;
+    } else {
+      input.value = '';
+    }
+    try {
+      if (typeof input.showPicker === 'function') {
+        input.showPicker();
+      } else {
+        input.focus();
+        input.click();
+      }
+    } catch {
+      input.focus();
+      input.click();
+    }
+  };
+
+  // Handle native picker date selection
+  const handleNativeDateChange = (e) => {
+    const val = e.target.value; // YYYY-MM-DD
+    if (!val) return;
+    const parts = val.split('-');
+    if (parts.length === 3) {
+      const [y, m, d] = parts;
+      setYear(y);
+      setMonth(m);
+      setDay(d);
+      updateParent(d, m, y);
+    }
+  };
+
+  // Fill today's date
+  const fillToday = () => {
+    const now = new Date();
+    const d = String(now.getDate()).padStart(2, '0');
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const y = String(now.getFullYear());
+    setDay(d);
+    setMonth(m);
+    setYear(y);
+    updateParent(d, m, y);
+  };
+
   return (
     <div className={`custom-date-picker ${className || ''}`} id={id} onBlur={handleContainerBlur}>
       <input
@@ -227,6 +279,46 @@ function CustomDatePicker({ value, onChange, onBlur, id, className, autoFocus })
         onKeyDown={(e) => handleKeyDown('year', e)}
         className="date-input-field year-input"
         maxLength={4}
+      />
+
+      {/* Calendar icon + hidden native date input */}
+      <div className="date-picker-actions">
+        {showTodayButton && (
+          <button
+            type="button"
+            className="date-today-btn"
+            onClick={fillToday}
+            onMouseDown={(e) => e.preventDefault()}
+            tabIndex={-1}
+          >
+            Today
+          </button>
+        )}
+        <button
+          type="button"
+          className="date-picker-icon-btn"
+          onClick={openNativePicker}
+          onMouseDown={(e) => e.preventDefault()}
+          aria-label="Open date picker"
+          tabIndex={-1}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Hidden native date input for picker */}
+      <input
+        ref={hiddenDateRef}
+        type="date"
+        className="date-hidden-native"
+        onChange={handleNativeDateChange}
+        tabIndex={-1}
+        aria-hidden="true"
       />
     </div>
   );
@@ -1471,6 +1563,7 @@ function App() {
                   className="form-input-date-container"
                   value={formData.date}
                   onChange={(val) => setFormData((prev) => ({ ...prev, date: val }))}
+                  showTodayButton
                 />
               </div>
               <div className="form-group">
